@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Food Battle Bracket</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f4f0;
+      color: #1a1a18;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    #app { max-width: 960px; margin: 0 auto; }
+
+    h1 { font-size: 28px; font-weight: 600; margin-bottom: 4px; color: #1a1a18; }
+    .subtitle { font-size: 15px; color: #5f5e5a; margin-bottom: 2rem; }
+
+    /* Setup screen */
+    #setup-screen { max-width: 580px; }
+
+    .food-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .food-slot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #d3d1c7;
+      border-radius: 8px;
+      padding: 7px 12px;
+    }
+
+    .slot-num { font-size: 12px; color: #888780; min-width: 18px; }
+
+    .food-slot input {
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      color: #1a1a18;
+      width: 100%;
+      outline: none;
+      font-family: inherit;
+    }
+    .food-slot input::placeholder { color: #b4b2a9; font-style: italic; }
+
+    .start-btn {
+      padding: 10px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #888780;
+      border-radius: 8px;
+      background: #1a1a18;
+      color: #f5f4f0;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .start-btn:hover { background: #2c2c2a; }
+
+    .secondary-btn {
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      border: 1px solid #d3d1c7;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #5f5e5a;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .secondary-btn:hover { background: #f1efe8; }
+
+    .error-msg { font-size: 13px; color: #a32d2d; margin-bottom: 12px; }
+
+    /* Bracket screen */
+    #bracket-screen { display: none; }
+
+    .bracket-outer {
+      display: flex;
+      align-items: flex-start;
+      overflow-x: auto;
+      padding-bottom: 1rem;
+    }
+
+    .bracket-wrap { display: flex; gap: 0; }
+
+    .round { display: flex; flex-direction: column; min-width: 148px; }
+
+    .round-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #888780;
+      text-align: center;
+      padding: 0 8px 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .match-col {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      flex: 1;
+      padding: 0 6px;
+    }
+
+    .seed-btn {
+      width: 100%;
+      padding: 7px 10px;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      border: 1px solid #d3d1c7;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #1a1a18;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s, opacity 0.4s, transform 0.15s;
+    }
+    .seed-btn:hover:not(:disabled) {
+      background: #f1efe8;
+      border-color: #b4b2a9;
+      transform: scale(1.02);
+    }
+    .seed-btn:disabled { cursor: default; }
+    .seed-btn.tbd { color: #b4b2a9; font-style: italic; }
+
+    .seed-btn.winner {
+      background: #eaf3de;
+      color: #3b6d11;
+      border-color: #97c459;
+      font-weight: 600;
+      animation: winnerPop 0.35s ease;
+    }
+    .seed-btn.loser {
+      opacity: 0.25;
+      animation: loserFade 0.4s ease forwards;
+    }
+
+    @keyframes winnerPop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.07); }
+      100% { transform: scale(1); }
+    }
+    @keyframes loserFade {
+      0%   { opacity: 1; transform: translateX(0); }
+      40%  { transform: translateX(-6px); }
+      100% { opacity: 0.25; transform: translateX(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes champReveal {
+      0%   { transform: scale(0.8); opacity: 0; }
+      60%  { transform: scale(1.08); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .matchup-enter { animation: slideIn 0.3s ease; }
+    .vs-divider { height: 1px; background: #d3d1c7; margin: 2px 4px; }
+
+    /* Champion */
+    .champion-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 148px;
+      padding: 0 12px;
+    }
+    .trophy { font-size: 32px; margin-bottom: 8px; }
+    .champ-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #888780;
+      margin-bottom: 8px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .champ-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: #5f5e5a;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      border: 1px solid #d3d1c7;
+      width: 100%;
+      text-align: center;
+      transition: background 0.3s, color 0.3s, border-color 0.3s;
+    }
+    .champ-name.revealed {
+      background: #faeeda;
+      color: #633806;
+      border-color: #ef9f27;
+      font-size: 16px;
+      font-weight: 700;
+      animation: champReveal 0.5s ease;
+    }
+
+    .action-row { display: flex; gap: 10px; margin-top: 1.5rem; flex-wrap: wrap; }
+
+    .reset-btn, .edit-btn {
+      padding: 8px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      border: 1px solid #d3d1c7;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #1a1a18;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .reset-btn:hover, .edit-btn:hover { background: #f1efe8; }
+    .edit-btn { color: #5f5e5a; }
+
+    /* Confetti */
+    #confetti-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 999;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<div id="app">
+  <h1>&#127860; Food Battle Bracket</h1>
+
+  <!-- SETUP SCREEN -->
+  <div id="setup-screen">
+    <p class="subtitle">Enter 16 foods to battle it out — or use the defaults and jump straight in!</p>
+    <div class="food-grid" id="food-inputs"></div>
+    <div class="error-msg" id="error-msg" style="display:none">Please fill in all 16 foods before starting.</div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="start-btn" onclick="startBracket()">Start the battle</button>
+      <button class="secondary-btn" onclick="fillDefaults()">Use defaults</button>
+    </div>
+  </div>
+
+  <!-- BRACKET SCREEN -->
+  <div id="bracket-screen">
+    <p class="subtitle">Click a food to advance it. Vote your way to the champion!</p>
+    <div class="bracket-outer">
+      <div class="bracket-wrap" id="bracket"></div>
+      <div class="champion-wrap">
+        <div class="trophy">&#127942;</div>
+        <div class="champ-label">Champion</div>
+        <div class="champ-name" id="champ-display">???</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="reset-btn" onclick="resetBracket()">Reset bracket</button>
+      <button class="edit-btn" onclick="goToSetup()">Edit foods</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const DEFAULTS = [
+    "Pizza","Tacos","Ramen","Fried Chicken",
+    "Sushi","Cheeseburger","Mac & Cheese","Pad Thai",
+    "Steak","Loaded Fries","Pho","Burritos",
+    "BBQ Ribs","Chicken Tikka","Grilled Cheese","Donuts"
+  ];
+  const ROUND_LABELS = ['Round of 16', 'Quarterfinals', 'Semifinals', 'Final'];
+  let foods = [...DEFAULTS];
+  let rounds = [];
+
+  function buildInputs() {
+    const grid = document.getElementById('food-inputs');
+    grid.innerHTML = '';
+    for (let i = 0; i < 16; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'food-slot';
+      slot.innerHTML = `<span class="slot-num">${i + 1}</span><input type="text" maxlength="24" placeholder="Food #${i + 1}" id="food-${i}" value="${foods[i] || ''}" />`;
+      grid.appendChild(slot);
+    }
+  }
+
+  function fillDefaults() {
+    foods = [...DEFAULTS];
+    buildInputs();
+  }
+
+  function startBracket() {
+    const inputs = [];
+    for (let i = 0; i < 16; i++) {
+      const val = document.getElementById(`food-${i}`).value.trim();
+      inputs.push(val);
+    }
+    const err = document.getElementById('error-msg');
+    if (inputs.some(f => !f)) { err.style.display = 'block'; return; }
+    err.style.display = 'none';
+    foods = inputs;
+    initBracket();
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('bracket-screen').style.display = 'block';
+    render();
+  }
+
+  function goToSetup() {
+    document.getElementById('bracket-screen').style.display = 'none';
+    document.getElementById('setup-screen').style.display = 'block';
+    buildInputs();
+  }
+
+  function initBracket() {
+    rounds = [];
+    let r0 = [];
+    for (let i = 0; i < 16; i += 2) r0.push({ a: foods[i], b: foods[i + 1], winner: null });
+    rounds.push(r0);
+    rounds.push([{ a:null,b:null,winner:null },{ a:null,b:null,winner:null },{ a:null,b:null,winner:null },{ a:null,b:null,winner:null }]);
+    rounds.push([{ a:null,b:null,winner:null },{ a:null,b:null,winner:null }]);
+    rounds.push([{ a:null,b:null,winner:null }]);
+  }
+
+  function vote(rIdx, mIdx, choice) {
+    const match = rounds[rIdx][mIdx];
+    if (!match.a || !match.b) return;
+    match.winner = choice;
+    const next = rounds[rIdx + 1];
+    if (next) {
+      const nMIdx = Math.floor(mIdx / 2);
+      const slot = mIdx % 2 === 0 ? 'a' : 'b';
+      next[nMIdx][slot] = choice;
+      if (next[nMIdx].winner && next[nMIdx].winner !== next[nMIdx].a && next[nMIdx].winner !== next[nMIdx].b) {
+        next[nMIdx].winner = null;
+        cascadeClear(rIdx + 1, nMIdx);
+      }
+    }
+    render();
+    if (rIdx === rounds.length - 1) setTimeout(launchConfetti, 200);
+  }
+
+  function cascadeClear(rIdx, mIdx) {
+    const slot = mIdx % 2 === 0 ? 'a' : 'b';
+    if (rIdx + 1 < rounds.length) {
+      const nMIdx = Math.floor(mIdx / 2);
+      rounds[rIdx + 1][nMIdx][slot] = null;
+      rounds[rIdx + 1][nMIdx].winner = null;
+      cascadeClear(rIdx + 1, nMIdx);
+    }
+  }
+
+  function resetBracket() { initBracket(); render(); }
+
+  function render() {
+    const el = document.getElementById('bracket');
+    el.innerHTML = '';
+    rounds.forEach((round, rIdx) => {
+      const roundDiv = document.createElement('div');
+      roundDiv.className = 'round';
+      const label = document.createElement('div');
+      label.className = 'round-label';
+      label.textContent = ROUND_LABELS[rIdx];
+      roundDiv.appendChild(label);
+      const col = document.createElement('div');
+      col.className = 'match-col';
+      const gapFactor = (8 / round.length) * 6;
+      round.forEach((match, mIdx) => {
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = `display:flex;flex-direction:column;gap:2px;position:relative;margin:${gapFactor}px 0;`;
+        wrapper.classList.add('matchup-enter');
+        [match.a, match.b].forEach((food, fi) => {
+          const btn = document.createElement('button');
+          btn.className = 'seed-btn';
+          const isTbd = !food;
+          btn.textContent = isTbd ? 'TBD' : food;
+          if (isTbd) btn.classList.add('tbd');
+          if (match.winner && match.winner === food) btn.classList.add('winner');
+          if (match.winner && match.winner !== food && food) btn.classList.add('loser');
+          btn.disabled = isTbd || !!match.winner || !match.a || !match.b;
+          btn.onclick = () => vote(rIdx, mIdx, food);
+          wrapper.appendChild(btn);
+          if (fi === 0) {
+            const d = document.createElement('div');
+            d.className = 'vs-divider';
+            wrapper.appendChild(d);
+          }
+        });
+        col.appendChild(wrapper);
+      });
+      roundDiv.appendChild(col);
+      el.appendChild(roundDiv);
+    });
+
+    const champion = rounds[rounds.length - 1][0].winner;
+    const champ = document.getElementById('champ-display');
+    champ.textContent = champion || '???';
+    champion ? champ.classList.add('revealed') : champ.classList.remove('revealed');
+  }
+
+  // Confetti
+  const COLORS = ['#EF9F27','#5DCAA5','#D85A30','#378ADD','#D4537E','#639922','#7F77DD'];
+  let confettiPieces = [];
+  let confettiRunning = false;
+
+  function launchConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.display = 'block';
+    confettiPieces = [];
+    for (let i = 0; i < 140; i++) {
+      confettiPieces.push({
+        x: Math.random() * canvas.width,
+        y: -10 - Math.random() * 100,
+        w: 7 + Math.random() * 7,
+        h: 10 + Math.random() * 6,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        vx: (Math.random() - 0.5) * 4,
+        vy: 2 + Math.random() * 4,
+        angle: Math.random() * 360,
+        spin: (Math.random() - 0.5) * 6,
+        opacity: 1
+      });
+    }
+    confettiRunning = true;
+    requestAnimationFrame(drawConfetti);
+    setTimeout(() => { confettiRunning = false; }, 3200);
+  }
+
+  function drawConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    confettiPieces.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.angle += p.spin;
+      p.vy += 0.12;
+      if (p.y < canvas.height + 20) alive = true;
+      if (p.y > canvas.height * 0.6) p.opacity = Math.max(0, p.opacity - 0.02);
+      ctx.save();
+      ctx.globalAlpha = p.opacity;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    if (confettiRunning || alive) requestAnimationFrame(drawConfetti);
+    else {
+      canvas.style.display = 'none';
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  buildInputs();
+</script>
+</body>
+</html>

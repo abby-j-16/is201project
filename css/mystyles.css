@@ -1,0 +1,32 @@
+p{
+    font-weight: bold;
+}
+
+#top{
+    text-decoration: underline;
+}
+
+.emphasizeText{
+    font-style: italic;
+    color:blue
+}
+
+body{
+    background-color: blanchedalmond;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header{
+    color:chocolate;
+    text-align:center;
+}
+
+.stylebox{
+    border: 1px solid #333;
+    padding: 12px;
+    text-align:center;
+}
+
+.stylebox2{
+    text-align:center;
+}
